@@ -47,7 +47,7 @@ def churn(request):
 
     # Get count of crimes as per addresses, types and times when they occur
     crimeAddresses = Counter(itertools.chain.from_iterable(addresses))
-    topThreeCrimeAddresses = crimeAddresses#.most_common(3) #Select top 3 addresses
+    topThreeCrimeAddresses = crimeAddresses.most_common(3) #Select top 3 addresses
     crimeAddressDictionary = sortStreets(OrderedDict(topThreeCrimeAddresses))
 
     crimeTypes = Counter(itertools.chain.from_iterable(types))
@@ -120,7 +120,7 @@ def timeSlot(hour):
 
 # Sorts and returns only streets as per highest no. of crimes
 def sortStreets(addresses):
-    return [i for i in sorted(addresses.items(), key = lambda item:item[1], reverse=True)]
+    return [i[0] for i in sorted(addresses.items(), key = lambda item:item[1], reverse=True)]
 
 # Sorts and returns types along with count
 def sort(others):
