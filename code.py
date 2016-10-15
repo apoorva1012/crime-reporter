@@ -23,11 +23,11 @@ class CrimeService(ServiceBase):
         # Store response in a variable
         request = requests.get(crime_data).json()
         # Yield the output
-        yield Churn(request)
+        yield churn(request)
 
 
 # This is the heart of application which churns the request to desired user output
-def Churn(request):
+def churn(request):
     addresses = []
     types = []
     times = []
@@ -47,7 +47,7 @@ def Churn(request):
 
     # Get count of crimes as per addresses, types and times when they occur
     crimeAddresses = Counter(itertools.chain.from_iterable(addresses))
-    topThreeCrimeAddresses = crimeAddresses.most_common(3) #Select top 3 addresses
+    topThreeCrimeAddresses = crimeAddresses#.most_common(3) #Select top 3 addresses
     crimeAddressDictionary = sortStreets(OrderedDict(topThreeCrimeAddresses))
 
     crimeTypes = Counter(itertools.chain.from_iterable(types))
@@ -66,31 +66,41 @@ def Churn(request):
 
 # Shreds any list to return useful result
 def shred(array):
-    # Address shredding space
+    array = array.strip('-') # Few addresses had address ending in '-' character
+    array = array.replace(".","") # Few addresses use 'N.'' instead of 'N' like 'N. Mary. vs 'N Mary'
+# Address shredding space starts below
     if ' AND ' in array:
         return array.split(' AND ')
-    elif ' & ' in array:
-        return array.split(' & ')
-    elif 'BLOCK OF' in array:
-        return array.split(' BLOCK OF ')[1::]
-    elif 'BLOCK BLOCK' in array:
-        return array.split(' BLOCK BLOCK ')[1::]
-
+    elif '&' in array:
+        return [i.strip() for i in array.split('&')]
+    elif ' / ' in array:
+        return [i.strip() for i in array.split('/')]
+    elif ' AT ' in array:
+        return [i.strip() for i in array.split(' AT ')][1::]
+    elif '-' in array and " " in array:
+        splitArray = (array.replace(' ','-',1)).split('-')
+        return  splitArray[len(splitArray)-1::]
+    # For 3 different occurences of BLOCK
+    elif 'BLOCK' in array:
+        if 'BLOCK OF' in array:
+            return [i.strip() for i in array.split('BLOCK OF')][1::]
+        elif 'BLOCK BLOCK' in array:
+            return [i.strip() for i in array.split('BLOCK BLOCK')][1::]
+        else:
+            return [i.strip() for i in array.split('BLOCK')][1::]
     # Time shredding space
     elif ':' in array:
         hour = array.split(':')
-        return [timeSlot(hour)] # Returns the time slot as per hour
-
-    # No shredding required; 'pseudo' is assumed to be a pattern not found in input string
+        return [timeSlot(hour)] # Returns the time slot list as per hour
+    # Added just to ensure all responses are in a common format once they are sent to be shred
     else:
-        return array.split('pseudo')
+        return array.split('####')
 
 
 # Converts time to a specific time slot
 def timeSlot(hour):
-    minutes = int(hour[0])*60 + int(hour[1])
-    factor = minutes/180
-    if factor > 0 and factor <= 3:
+    factor = int(hour[0]) + int(hour[1])
+    if 0 < factor <= 3:
         return "12:01am-3am"
     elif factor > 3 and factor <= 6:
         return "3:01am-6am"
@@ -110,7 +120,7 @@ def timeSlot(hour):
 
 # Sorts and returns only streets as per highest no. of crimes
 def sortStreets(addresses):
-    return [i[0] for i in sorted(addresses.items(), key = lambda item:item[1], reverse=True)]
+    return [i for i in sorted(addresses.items(), key = lambda item:item[1], reverse=True)]
 
 # Sorts and returns types along with count
 def sort(others):
